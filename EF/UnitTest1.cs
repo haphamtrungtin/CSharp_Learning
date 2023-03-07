@@ -1,6 +1,3 @@
-using System.Reflection;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-
 namespace EF
 {
     [TestClass]
@@ -17,34 +14,44 @@ namespace EF
                 Id = 1,
                 Sender = user,
                 IsEdited = false,
-                Emojies = new List<Emoji>()
+                //Emojies = new List<Emoji>(),
+                Reactors = new HashSet<Reactor>()
             };
             Emoji emoji = EmojiService.GetEmojies().FirstOrDefault();
-            emoji.Sender = user;
+            Reactor reactor = new Reactor()
+            {
+                Id = 1,
+                Emoji = emoji,
+                User = user
+            };
 
+            Message result = UserService.CreateEmoji(message, reactor);
 
-            Message result = MessageService.CreateEmoji(message, emoji);
-
-            Assert.IsTrue(message.Emojies.Count > 0);
+            Assert.IsTrue(result.Emojies.Count > 0);
         }
 
         [TestMethod]
         public void RemoveEmojiTest()
         {
-            List<User> users = UserService.GetUsers();
+            User user = UserService.GetUsers().FirstOrDefault();
             Emoji emoji = EmojiService.GetEmojies().FirstOrDefault();
             Message message = new()
             {
                 Content = "Lorem ipsum",
                 Date = DateTime.Now,
                 Id = 1,
-                Sender = users[0],
-                IsEdited = false,
-                Emojies = new List<Emoji>()
+                Sender = user,
+                IsEdited = false
+            };
+            Reactor reactor = new Reactor()
+            {
+                Id = 1,
+                Emoji = emoji,
+                User = user
             };
 
-            Message newMes = MessageService.CreateEmoji( message, emoji);
-            Message result = MessageService.RemoveEmoji(newMes, users[0]);
+            Message newMes = UserService.CreateEmoji(message, reactor);
+            Message result = UserService.RemoveEmoji(newMes, user);
 
             Assert.IsTrue(result.Emojies.Count == 0);
         }
@@ -66,17 +73,35 @@ namespace EF
                 IsEdited = false,
                 Emojies = new List<Emoji>()
             };
+            Reactor reactor = new Reactor()
+            {
+                Id = 1,
+                Emoji = emoji1,
+                User = user1
+            };
+            Reactor reactor2 = new Reactor()
+            {
+                Id = 2,
+                Emoji = emoji2,
+                User = user2
+            };
+            Reactor reactor3 = new Reactor()
+            {
+                Id = 3,
+                Emoji = emoji2,
+                User = user3
+            };
 
             emoji1.Sender = user2;
             emoji1.CreatedAt = new DateTime(2023, 3, 3);
-            MessageService.CreateEmoji(message, emoji1);
+            UserService.CreateEmoji(message, reactor);
 
             emoji2.Sender = user1;
             emoji2.CreatedAt = new DateTime(2023, 2, 3);
-            MessageService.CreateEmoji(message, emoji2);
+            UserService.CreateEmoji(message, reactor2);
 
             emoji2.Sender = user3;
-            MessageService.CreateEmoji(message, emoji2);
+            UserService.CreateEmoji(message, reactor3);
 
             Assert.IsTrue(message.Emojies.FirstOrDefault().Quantity < message.Emojies.LastOrDefault().Quantity);
             //current message have emoji[0] with 2 reactor, e[1] with 1 reactor
@@ -96,6 +121,24 @@ namespace EF
             Emoji emoji1 = EmojiService.GetEmojies().FirstOrDefault();
             Emoji emoji2 = EmojiService.GetEmojies().LastOrDefault();
             Emoji emoji3 = EmojiService.GetEmojies().Find(i => i.Id.Equals(3));
+            Reactor reactor = new Reactor()
+            {
+                Id = 1,
+                Emoji = emoji1,
+                User = user1
+            };
+            Reactor reactor2 = new Reactor()
+            {
+                Id = 2,
+                Emoji = emoji2,
+                User = user2
+            };
+            Reactor reactor3 = new Reactor()
+            {
+                Id = 3,
+                Emoji = emoji3,
+                User = user3
+            };
             Message message = new()
             {
                 Content = "Lorem ipsum",
@@ -103,20 +146,21 @@ namespace EF
                 Id = 1,
                 Sender = user1,
                 IsEdited = false,
-                Emojies = new List<Emoji>()
+                Emojies = new List<Emoji>(),
+                Reactors = new HashSet<Reactor> { reactor, reactor2, reactor3 }
             };
 
             emoji1.Sender = user2;
             emoji1.CreatedAt = new DateTime(2023, 5, 3);
-            MessageService.CreateEmoji(message, emoji1);
+            UserService.CreateEmoji(message, reactor);
 
             emoji2.Sender = user1;
             emoji2.CreatedAt = new DateTime(2023, 4, 3);
-            MessageService.CreateEmoji(message, emoji2);
+            UserService.CreateEmoji(message, reactor2);
 
             emoji3.Sender = user3;
             emoji3.CreatedAt = new DateTime(2023, 3, 3);
-            MessageService.CreateEmoji(message, emoji3);
+            UserService.CreateEmoji(message, reactor3);
 
             //current message have emoji[0] with 2 reactor, e[1] with 1 reactor
             //time order emoji[0] -> emoji[1] --> emoji[0]
@@ -167,7 +211,7 @@ namespace EF
 
             Conversation conversation = UserService.SendMessage(sender, message, receiver);
 
-            Message deletedMessage = MessageService.Remove(conversation, message, sender);
+            Message deletedMessage = UserService.Remove(conversation, message, sender);
 
             Assert.IsTrue(deletedMessage.IsDeleted);
         }
@@ -189,7 +233,7 @@ namespace EF
 
             Conversation conversation = UserService.SendMessage(sender, message, receiver);
 
-            Message undoMessage = MessageService.Undo(conversation, message, sender);
+            Message undoMessage = UserService.Undo(conversation, message, sender);
 
             Assert.IsFalse(undoMessage.IsDeleted);
         }
@@ -222,7 +266,7 @@ namespace EF
             };
 
             Conversation conversation = UserService.SendMessage(sender, oldMes, receiver);
-            Message reply = MessageService.ReplyMessage(conversation, newMes, oldMes);
+            Message reply = UserService.ReplyMessage(conversation, newMes, oldMes);
 
             Assert.IsTrue(reply.Reply is not null);
             Assert.IsTrue(reply.Reply.Date < reply.Date);
@@ -245,7 +289,7 @@ namespace EF
             };
             string newContent = "Test test";
             Conversation conversation = UserService.SendMessage(sender, message, receiver);
-            Message newMes = MessageService.EditContent(conversation, sender, message , newContent);
+            Message newMes = UserService.EditContent(conversation, sender, message , newContent);
 
             Assert.AreEqual(message.Content, newMes.Content, newContent);
         }
@@ -256,6 +300,7 @@ namespace EF
             //Arrange
             User sender = UserService.GetUsers().FirstOrDefault();
             Emoji emoji1 = EmojiService.GetEmojies().FirstOrDefault();
+            Emoji emoji2 = EmojiService.GetEmojies().LastOrDefault();
             Message message = new()
             {
                 Content = "Lorem ipsum",
@@ -265,13 +310,53 @@ namespace EF
                 IsEdited = false,
                 Emojies = new List<Emoji>() { emoji1 }
             };
+            emoji1.Sender = sender;
 
-            //message.ReplaceEmoji(sender);
+            Assert.IsTrue(message.Emojies.Contains(emoji1));
 
-            //Assert.IsTrue();
+            UserService.ReplaceEmoji(sender, message, emoji2);
+
+            Assert.IsTrue(message.Emojies.Any(e=>e.Name.Equals(emoji2.Name)));
+            Assert.IsTrue(message.Emojies.Any(e=>e.Unicode.Equals(emoji2.Unicode)));
+            Assert.IsFalse(message.Emojies.Contains(emoji1));
         }
 
         [TestMethod]
-        public void ShowListReactor() { }
+        public void ShowListReactorTest() 
+        {
+            //Arrange
+            User sender = UserService.GetUsers().FirstOrDefault();
+            User sender1 = UserService.GetUsers().LastOrDefault();
+            Emoji emoji1 = EmojiService.GetEmojies().FirstOrDefault();
+            Emoji emoji2 = EmojiService.GetEmojies().LastOrDefault();
+            Reactor reactor = new()
+            {
+                Id = 1,
+                Emoji = emoji1,
+                User = sender
+            };
+            Reactor reactor2 = new()
+            {
+                Id = 2,
+                Emoji = emoji2,
+                User = sender1
+            };
+            Message message = new()
+            {
+                Content = "Lorem ipsum",
+                Date = DateTime.Now,
+                Id = 1,
+                Sender = sender,
+                IsEdited = false,
+                Emojies = new List<Emoji>() {},
+                Reactors = new HashSet<Reactor> { reactor, reactor2 }
+            };
+
+            HashSet<Reactor> reactorList = MessageService.ShowListReactor(message);
+
+            Assert.IsTrue(reactorList.Any(e => e.User == sender));
+            Assert.IsTrue(reactorList.Any(e=>e.Emoji.Equals(emoji1)));
+            Assert.IsTrue(reactorList.Any(e=>e.Emoji.Equals(emoji2)));
+        }
     }
 }

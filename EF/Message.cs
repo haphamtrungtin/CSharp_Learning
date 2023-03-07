@@ -12,10 +12,9 @@ namespace EF
         public User? Sender { get; set; }
         public bool? IsEdited { get; set; }
         public List<Emoji> Emojies { get; set; } = new List<Emoji>();
+        public HashSet<Reactor> Reactors { get; set; } = new HashSet<Reactor>();
         public bool? IsDeleted { get; internal set; }
         public Message? Reply { get; internal set; }
-
-       
     }
 
 }

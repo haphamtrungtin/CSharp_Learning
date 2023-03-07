@@ -46,5 +46,125 @@ namespace EF
                 return currentConversation;
             }
         }
+
+        internal static Message CreateEmoji(Message message, Reactor reactor)
+        {
+            message.Reactors.Add(reactor);
+            reactor.Emoji.Quantity++;
+            message.Emojies.Add(reactor.Emoji);
+            return message;
+        }
+
+        internal static Message RemoveEmoji(Message message, User user)
+        {
+            //check which emoji is create by user
+            //Emoji? result = message.Reactors.FirstOrDefault(e => message.Emojies.Contains(e.Emoji));
+            //Emoji result = message.Emojies.FirstOrDefault(e => e.Equals(message.Reactors.FirstOrDefault(r => r.Emoji == e)));
+
+            Reactor reactor = message.Reactors.FirstOrDefault(r => r.Id.Equals(user.Id));
+            if (reactor != null)
+            {
+                message.Emojies.Remove(reactor.Emoji);
+                message.Reactors.Remove(reactor);
+                return message;
+            }
+            else
+            {
+                return message;
+            }
+
+        }
+
+        internal static Message Remove(Conversation conversation, Message message, User sender)
+        {
+            Message? mes = GetMessageInConversation(conversation, message);
+            bool isOwner = CheckMessageOwner(mes, sender);
+
+            if (mes is null && !isOwner)
+            {
+                return message;
+            }
+            else
+            {
+                mes.IsDeleted = true;
+                return mes;
+            }
+        }
+
+        internal static Message Undo(Conversation conversation, Message message, User sender)
+        {
+            Message? mes = GetMessageInConversation(conversation, message);
+            bool isOwner = CheckMessageOwner(mes, sender);
+
+            if (mes is null && !isOwner)
+            {
+                return message;
+            }
+            else
+            {
+                mes.IsDeleted = false;
+                return mes;
+            }
+
+        }
+
+        internal static Message ReplyMessage(Conversation conversation, Message newMes, Message oldMes)
+        {
+            if (conversation.Messages.Contains(oldMes) && newMes.Reply is null)
+            {
+                newMes.Reply = oldMes;
+                return newMes;
+            }
+            else
+            {
+                return newMes;
+            }
+        }
+
+        internal static Message EditContent(Conversation conversation, User sender, Message message, string newContent)
+        {
+            Message? mes = GetMessageInConversation(conversation, message);
+            bool isOwner = CheckMessageOwner(mes, sender);
+
+            if (mes is null && !isOwner)
+            {
+                return message;
+            }
+            else
+            {
+                mes.Content = newContent;
+                return mes;
+            }
+        }
+
+        internal static void ReplaceEmoji(User? sender, Message message, Emoji emoji2)
+        {
+            if (message != null)
+            {
+                Emoji? emoji = message.Emojies.Find(e => e.Sender == sender);
+                if (emoji != null)
+                {
+                    message.Emojies.Remove(emoji);
+                    message.Emojies.Add(emoji2);
+                }
+            }
+        }
+
+        private static bool CheckMessageOwner(Message? message, User sender)
+        {
+            //check if owner of the message is sender
+            if (message != null)
+            {
+                return message.Sender.Id.Equals(sender.Id);
+            }
+            return false;
+        }
+
+        private static Message? GetMessageInConversation(Conversation conversation, Message message)
+        {
+            //check if message in that conversation
+            //and user is owner
+            return conversation.Messages.Find(m => m.Id.Equals(message.Id));
+        }
     }
 }
